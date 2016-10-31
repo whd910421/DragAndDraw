@@ -5,6 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -19,7 +21,7 @@ import java.util.List;
 
 public class BoxDrawingView extends View {
     private static final String TAG = "BoxDrawingView";
-
+    private static final String PARENT_STATE_KEY = "xxx";
     private Box mCurrentBox;
     private List<Box> mBoxes = new ArrayList<>();
     private Paint mBoxPaint;
@@ -40,6 +42,65 @@ public class BoxDrawingView extends View {
     }
 
     @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+//        super.onRestoreInstanceState(state);
+        if (state != null)
+        {
+            Bundle bundle = (Bundle) state;
+            super.onRestoreInstanceState(bundle.getParcelable(PARENT_STATE_KEY));
+            String prefixName = "box";
+            int boxCount = 1;
+
+            // While we found a key we will create boxes.
+            while (bundle.containsKey(prefixName + boxCount)) {
+                // Get the x and y values from the bundle.
+                float[] pointsArray = bundle.getFloatArray(prefixName + boxCount);
+
+                // Create the boxes from the saved array.
+                PointF origin = new PointF(pointsArray[0], pointsArray[1]);
+                PointF current = new PointF(pointsArray[2], pointsArray[3]);
+                Box box = new Box(origin);
+                box.setCurrent(current);
+
+                mBoxes.add(box);
+                boxCount++;
+            }
+            Log.i(TAG, "读取了有"+ boxCount);
+        } else {
+            super.onRestoreInstanceState(state);
+        }
+    }
+
+    @Override
+    protected Parcelable onSaveInstanceState() {
+        Parcelable parentState = super.onSaveInstanceState();
+
+        // Bundle used to save the state.
+        Bundle bundle = new Bundle();
+        bundle.putParcelable(PARENT_STATE_KEY, parentState);
+
+        int boxNumber = 1;
+
+        // Saved the state of the draw boxes
+        // the order of the points are origin.x, origin.y,
+        // current.x, current,y.
+        for(Box box : mBoxes) {
+
+            float[] pointsArray = { box.getOrigin().x, box.getOrigin().y,
+                    box.getCurrent().x, box.getCurrent().y
+            };
+
+            // Save all the boxes.
+            bundle.putFloatArray("box" + boxNumber,
+                    pointsArray);
+            boxNumber ++;
+        }
+        Log.i(TAG,"存了有"+ boxNumber);
+
+        return bundle;
+    }
+
+    @Override
     protected void onDraw(Canvas canvas) {
         canvas.drawPaint(mBackgroundPaint);
 
@@ -52,7 +113,6 @@ public class BoxDrawingView extends View {
 
             canvas.drawRect(left,top,right,bottom, mBoxPaint);
 
-            canvas.drawPath();
         }
     }
 
@@ -88,7 +148,7 @@ public class BoxDrawingView extends View {
                 break;
         }
 
-        Log.i(TAG, "当前动作和位置"+ action + "action" + current.x +"  "+ current.y);
+//        Log.i(TAG, "当前动作和位置"+ action + "action" + current.x +"  "+ current.y);
         return true;
     }
 
